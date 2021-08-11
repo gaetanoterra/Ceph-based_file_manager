@@ -4,7 +4,12 @@ import subprocess
 
 def menu():
     #funzione che mostra il menu
-    print("sono nel menu")
+    print("**********************MENU*******************\n"
+          "Operazioni disponibili:\n"
+          "get_object_list\n"
+          "prova\n"
+          "exit\n"
+          "**********************************************\n")
 
 def receive(s):
     #dim_received = int(s.recv(4096)) #ricevo la dimensione del messaggio
@@ -16,6 +21,7 @@ def send(s, m):
     #s.send(str(sys.getsizeof(m)).encode('utf-8')) #invio la dimensione della risposta al server
     s.send(m.encode('utf-8')) #invio la risposta al server
     #s.close()
+    
 def server_connection(id, port):
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     s.connect((server_name, server_port))
@@ -24,17 +30,35 @@ def server_connection(id, port):
 
 if __name__ == '__main__':
     server_id = "252.3.233.130" # ip del container con cui comunicare
-    server_port = 12000
-    s = server_connection(server_id, server_port)
+    server_port = 8080
+    
+    while True:
+        request = input('what do you want to do? ')
 
-    #while True:
-    #menu()
-         #request = input('what do you want to do? ')
-    request = 'get_object_list'
+        if request == 'get_object_list':
+            #r = requests.get("{}/objects".format(server_id))
+            #print(r.text)
+            message = "GET /objects HTTP/1.1\r\n"
+            contentType = "Content-Type: application/x-www-form-urlencoded\r\n"
 
-    if request == 'get_object_list':
-        #s.send(str(sys.getsizeof(request)).encode('utf-8'))
-        s.send(request.encode('utf-8'))
+            s = server_connection(server_id, server_port)
+            send(s, message)
 
-    elif r == 'exit':
-        print("sono nell'exit")
+        elif request == 'prova':
+            #r = requests.get("{}/objects/prova".format(server_id))
+            #print(r.text)
+
+            message = "GET /objects/prova HTTP/1.1\r\n"
+            contentType = "Content-Type: application/x-www-form-urlencoded\r\n"
+
+            messaggio_finale = message + contentType
+            s = server_connection(server_id, server_port)
+            send(s, messaggio_finale)
+            r = receive(s)
+            print(r)
+
+        elif request == 'exit':
+            loop = False
+            #r = requests.get("{}/objects/exit".format(server_id))
+
+    print("\n")
