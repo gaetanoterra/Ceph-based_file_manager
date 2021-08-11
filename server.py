@@ -62,47 +62,34 @@ class HandleServer:
         pass
 
 
+def get_prova():
+    message = "GET /objects/prova HTTP/1.1\r\n"
+    contentType = "Content-Type: application/x-www-form-urlencoded\r\n"
+    body = "body di prova"
+    messaggio_finale = message + contentType + body
+    send(client_socket, messaggio_finale)    
+    
 def client_receive(client_socket):
     return client_socket.recv(4096).decode('utf-8')
 
 def client_send(client_socket, m):
-    client_socket.send(str(sys.getsizeof(m)).encode('utf-8'))
+    #client_socket.send(str(sys.getsizeof(m)).encode('utf-8'))
     client_socket.send(m.encode('utf-8'))
 
-def client_connection(client_port):
-    try:
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.bind(("", client_port))
-        client_socket.listen()
-        print("Server connected")
-    except socket.error as errore:
-        print("Something went wrong: \n{errore}")
-    connection = client_socket.accept()[0]
-    return connection, client_socket
-
-
 if __name__ == '__main__':
-    server = HandleServer()
-    server.handle_request(server.get_object_list)
-    server.handle_request(server.get_object, "hw")
-    port = 12000
-    connection, client_socket = client_connection(port)
-    finished = False
-    while not finished:
-        request = client_receive(connection)
-        if request == "get_object_list":
-            server.handle_request(eval("server." + request))
-        elif request == "get_cluster_state":
-            server.handle_request(eval("server." + request))
-        elif request == "add_object":
-            file = client_receive(connection)
-            server.handle_request(server.add_object, file)
-        elif request == "delete_object":
-            file = client_receive(connection)
-            server.handle_request(server.delete_object, file)
-        elif request == "get_object":
-            file = client_receive(connection)
-            print(request, file)
-            server.handle_request(server.get_object, str(file))
-        elif request == "exit":
-            finished = True
+    s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    s.bind(("",8080))
+    print("Server in ascolto")
+
+    while True:
+        s.listen()
+        clientSocket, clientAddress = s.accept()
+
+        request = receive(clientSocket).split(" ")
+        print("request: {}".format(request[0]))
+        if (request[0] ==  "GET") & (request[1] == "/objects/prova"):
+            print("sono in provaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n")
+            get_prova(clientSocket)
+        else:
+            print("comando errato")
+            break
