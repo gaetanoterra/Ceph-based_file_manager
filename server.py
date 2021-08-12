@@ -61,6 +61,29 @@ class HandleServer:
     def exit(self):
         pass
 
+def create_pool_if_non_existent(cluster, pool):
+    if cluster.pool_exists(pool) is False:
+        cluster.create_pool(pool)
+
+    return pool
+
+def get_object_list(cluster, pool):
+    obj_string = ""
+    try:
+        ioctx = cluster.open_ioctx(pool)
+        objects = list(ioctx.list_objects())
+        for obj in objects:
+            obj_string += "{}\n".format(obj.key)
+    except Exception as e:
+        print("error: {}".format(e))
+        print("unable to get object list from pool " + pool)
+        return "unable to get object list"
+    finally:
+        if not obj_string:
+            obj_string = "unable to get object list from pool " + pool
+        ioctx.close()
+        
+    return obj_string
 
 def get_prova():
     message = "GET /objects/prova HTTP/1.1\r\n"
@@ -81,15 +104,26 @@ if __name__ == '__main__':
     s.bind(("",8080))
     print("Server in ascolto")
 
+################### TO DO : creare una classe per la costruzione dell'header e del messaggio completo
     while True:
         s.listen()
         clientSocket, clientAddress = s.accept()
+        
+        cluster = rados.Rados(conffile='ceph.conf')
+        cluster.connect()
+        pool = create_pool_if_non_existent(cluster, "exam_data")
 
         request = receive(clientSocket).split(" ")
         print("request: {}".format(request[0]))
-        if (request[0] ==  "GET") & (request[1] == "/objects/prova"):
-            print("sono in provaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n")
-            get_prova(clientSocket)
+        if (request[0] ==  "GET") & (request[1] == "/objects"):
+            print("sono in get_object_list")
+            get_object_list(cluster, pool)
+            print("obj: {}".format(message))
+            send(client_socket, message)
+        
+        elif (request[0] ==  "GET") & (request[1] == "/objects"):
+            print("sono in get_object")
+        
         else:
             print("comando errato")
             break
