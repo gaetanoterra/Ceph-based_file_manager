@@ -36,13 +36,13 @@ if __name__ == '__main__':
         request = input('what do you want to do? ')
 
         if request == 'get_object_list':
-            #r = requests.get("{}/objects".format(server_id))
-            #print(r.text)
             message = "GET /objects HTTP/1.1\r\n"
             contentType = "Content-Type: application/x-www-form-urlencoded\r\n"
 
             s = server_connection(server_id, server_port)
             send(s, message)
+            r = receive(s)
+            print(r)
 
         elif request == 'prova':
             #r = requests.get("{}/objects/prova".format(server_id))
