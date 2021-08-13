@@ -84,24 +84,41 @@ def get_object_list(cluster, pool):
         ioctx.close()
         
     return obj_string
+  
+def get_object(cluster, pool, file):
+    try:
+        ioctx = cluster.open_ioctx(pool)
+        file_content = ioctx.read(file)
+    except Exception as e:
+        print("error: {}".format(e))
+        print("failed to get object " + file)
+        return  False
+    finally:
+        ioctx.close()
 
-def get_prova():
-    message = "GET /objects/prova HTTP/1.1\r\n"
-    contentType = "Content-Type: application/x-www-form-urlencoded\r\n"
-    body = "body di prova"
-    messaggio_finale = message + contentType + body
-    send(client_socket, messaggio_finale)    
+    return file_content
     
-def client_receive(client_socket):
-    return client_socket.recv(4096).decode('utf-8')
+def receive(s, b):
+    #dim_received = int(s.recv(4096)) #ricevo la dimensione del messaggio
+    if b == True:
+        data_received = s.recv(4096)
+    else:
+        data_received = s.recv(4096).decode('utf-8') #ricevo il messaggio
+    
+    return data_received
 
-def client_send(client_socket, m):
-    #client_socket.send(str(sys.getsizeof(m)).encode('utf-8'))
-    client_socket.send(m.encode('utf-8'))
+def send(s, m, b):
+    #s.send(str(sys.getsizeof(m)).encode('utf-8')) #invio la dimensione della risposta al server
+    if b == True:
+        s.send(m)
+    else:
+        s.send(m.encode('utf-8')) #invio la risposta al server
+
 
 if __name__ == '__main__':
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     s.bind(("",8080))
+    binary_obj = False
     print("Server in ascolto")
 
 ################### TO DO : creare una classe per la costruzione dell'header e del messaggio completo
@@ -113,16 +130,29 @@ if __name__ == '__main__':
         cluster.connect()
         pool = create_pool_if_non_existent(cluster, "exam_data")
 
-        request = receive(clientSocket).split(" ")
+        binary_obj = False #voglio ricevere una stringa => decodifico dal binary
+        request = receive(client_socket, binary_obj).split(" ")
         print("request: {}".format(request[0]))
         if (request[0] ==  "GET") & (request[1] == "/objects"):
             print("sono in get_object_list")
             get_object_list(cluster, pool)
             print("obj: {}".format(message))
-            send(client_socket, message)
+            
+            binary_obj = False #invio la lista come stringa
+            send(client_socket, message, binary_obj)
         
-        elif (request[0] ==  "GET") & (request[1] == "/objects"):
-            print("sono in get_object")
+        elif (request[0] ==  "GET") & ("/objects/" in request[1]):
+            file_to_download = request[1].split('/')[2]
+            
+            print("file_to_download: {}".format(file_to_download))
+            message = get_object(cluster, pool, file_to_download)
+            if message is False:
+                binary_obj = False
+                message = "oggetto richiesto non trovato!"
+            else:
+                binary_obj = True #invio l'oggetto come insieme di byte
+
+            send(client_socket, message, binary_obj)
         
         else:
             print("comando errato")
