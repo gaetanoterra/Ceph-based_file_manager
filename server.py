@@ -98,27 +98,57 @@ def get_object(cluster, pool, file):
 
     return file_content
     
-def receive(s, b):
+### io ricevo il messaggio come request line, header (ultime elemento è content-length), riga vuota, body
+def receive(s):
     #dim_received = int(s.recv(4096)) #ricevo la dimensione del messaggio
-    if b == True:
-        data_received = s.recv(4096)
+    data_received = s.recv(1024)
+    print("data_received: {}".format(data_received))
+
+    header = data_received.decode('utf-8')
+
+    header = data_received.split("\n\n")[0] # selezione l'header
+    l = header.split("Content-Length:")     # seleziono tutti i campi dell'header per prendere l'ultimo che corrisponde a Content-Length
+    dim = l[1]
+    l = int(dim.split("\r\n")[0])             # qui prendo la dimensione del body
+    missing_len = l - (1024 - len(header))  # io potrei aver ricevuto parte del body di dimensione (1024 - dimensione dell'hader), vedo quanto è lungo il body in totale, e vedo quanto ho ricevuto attualmente e mi aspetto la differenze
+    if missing_len > 0:
+        missing_data_received = s.recv(missing_len)
+        body = ((data_received + missing_data_received).decode('utf-8')).split("\n\n")[1]
     else:
-        data_received = s.recv(4096).decode('utf-8') #ricevo il messaggio
+        body = data_received.decode('utf-8')[1]
     
-    return data_received
+    print("header: {}".format(header))
+    print("l: {}".format(l))
+    print("missing_len: {}".format(missing_len))
+    print("body: {}".format(body))
+    
+    message = (header.encode('utf-8') + body.encode('utf-8'))
+    return message
 
-def send(s, m, b):
-    #s.send(str(sys.getsizeof(m)).encode('utf-8')) #invio la dimensione della risposta al server
-    if b == True:
-        s.send(m)
-    else:
-        s.send(m.encode('utf-8')) #invio la risposta al server
+def send(s, m):
+    s.send(m.encode('utf-8')) #invio la risposta al server
 
+def create_HTTP_request(request_line, body):
+    request_line = request_line
+    header = header = "Content-Type: application/x-www-form-urlencoded\r\nContent-Length: {}\r\n".format(sys.getsizeof(body))
+    empty_line = "\n"
+    body = body
+    message = request_line + header + empty_line + body
+
+    return message 
+
+def create_HTTP_response(status_line, body):
+    status_line = status_line
+    header = header = "Content-Type: application/x-www-form-urlencoded\r\nContent-Length: {}\r\n".format(sys.getsizeof(body))
+    empty_line = "\n"
+    body = body
+    message = status_line + header + empty_line + body
+    
+    return message
 
 if __name__ == '__main__':
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     s.bind(("",8080))
-    binary_obj = False
     print("Server in ascolto")
 
 ################### TO DO : creare una classe per la costruzione dell'header e del messaggio completo
@@ -130,27 +160,28 @@ if __name__ == '__main__':
         cluster.connect()
         pool = create_pool_if_non_existent(cluster, "exam_data")
 
-        binary_obj = False #voglio ricevere una stringa => decodifico dal binary
-        request = receive(client_socket, binary_obj).split(" ")
+        request = receive(client_socket).decode('utf-8').split(" ")
         print("request: {}".format(request[0]))
         if (request[0] ==  "GET") & (request[1] == "/objects"):
             print("sono in get_object_list")
-            get_object_list(cluster, pool)
-            print("obj: {}".format(message))
+            body = get_object_list(cluster, pool)
+            ### TODO: fare un if per lo status line
+            status_line = ""
             
-            binary_obj = False #invio la lista come stringa
-            send(client_socket, message, binary_obj)
+            message = create_HTTP_response(status_line, body)
+            send(client_socket, message)
         
         elif (request[0] ==  "GET") & ("/objects/" in request[1]):
             file_to_download = request[1].split('/')[2]
             
             print("file_to_download: {}".format(file_to_download))
-            message = get_object(cluster, pool, file_to_download)
+            body = get_object(cluster, pool, file_to_download)
             if message is False:
-                binary_obj = False
-                message = "oggetto richiesto non trovato!"
+                body = "oggetto richiesto non trovato!"
             else:
-                binary_obj = True #invio l'oggetto come insieme di byte
+                body = body.decode('utf-8')
+                
+            status_line = ""
 
             send(client_socket, message, binary_obj)
         
