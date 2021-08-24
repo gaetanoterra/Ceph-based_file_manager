@@ -206,7 +206,7 @@ if __name__ == '__main__':
 ################### TO DO : creare una classe per la costruzione dell'header e del messaggio completo
     while True:
         s.listen()
-        clientSocket, clientAddress = s.accept()
+        client_socket, client_address = s.accept()
         
         cluster = rados.Rados(conffile='ceph.conf')
         cluster.connect()
