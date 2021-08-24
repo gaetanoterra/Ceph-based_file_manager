@@ -97,6 +97,50 @@ def get_object(cluster, pool, file):
         ioctx.close()
 
     return file_content
+
+def add_object(file, body, cluster, pool):
+    try:
+        ioctx = cluster.open_ioctx(pool)
+        ioctx.write_full(file, body.encode('utf-8'))
+        print("{} was successfully added.".format(file))
+        response = "file successfully added\n"
+    except Exception as e:
+        print(e)
+        print("Unable to add the object to: " + pool)
+        response = "error adding the new file\n"
+    ioctx.close()
+
+    return response
+
+def delete_object(filename, cluster, pool):
+    try:
+        ioctx = cluster.open_ioctx(pool)
+        ioctx.remove_object(filename)
+        print("{} was successfully deleted.".format(filename))
+        response = "file successfully deleted\n"
+    except Exception as e:
+        print(e)
+        print("Unable to add the object to: " + pool)
+        response = "error deleting the file\n"
+    ioctx.close()
+
+    return response
+
+def get_cluster_state(cluster, pool):
+    response = ""
+    try:
+        ioctx = cluster.open_ioctx(pool)
+        status = ioctx.get_stats()
+        for key, value in status.items():
+            response = response + str(key) + ":" + str(value) + "\n"
+    except Exception as e:
+        print(e)
+        print("Unable to get the status")
+        response = "Unable to get the status"
+    ioctx.close()
+
+    return response
+
     
 ### io ricevo il messaggio come request line, header (ultime elemento è content-length), riga vuota, body
 def receive(s):
@@ -110,13 +154,21 @@ def receive(s):
     l = header.split("Content-Length:")     # seleziono tutti i campi dell'header per prendere l'ultimo che corrisponde a Content-Length
     dim = l[1]
     l = int(dim.split("\r\n")[0])             # qui prendo la dimensione del body
-    missing_len = l - (1024 - len(header))  # io potrei aver ricevuto parte del body di dimensione (1024 - dimensione dell'hader), vedo quanto è lungo il body in totale, e vedo quanto ho ricevuto attualmente e mi aspetto la differenze
-    if missing_len > 0:
-        missing_data_received = s.recv(missing_len)
-        body = ((data_received + missing_data_received).decode('utf-8')).split("\n\n")[1]
-    else:
-        body = data_received.decode('utf-8')[1]
-    
+    #missing_len = l - (1024 - len(header[0].encode('utf-8')))  # io potrei aver ricevuto parte del body di dimensio$
+    missing_len = l
+    body = header[1].encode('utf-8')
+    print("missing_len: {}".format(missing_len))
+
+    while missing_len > 0:
+        d = 1024
+        if missing_len < d:
+            d = missing_len
+        missing_data_received = s.recv(d)
+        body = body + missing_data_received
+
+        missing_len = missing_len -  d
+
+
     print("header: {}".format(header))
     print("l: {}".format(l))
     print("missing_len: {}".format(missing_len))
@@ -160,8 +212,9 @@ if __name__ == '__main__':
         cluster.connect()
         pool = create_pool_if_non_existent(cluster, "exam_data")
 
-        request = receive(client_socket).decode('utf-8').split(" ")
-        print("request: {}".format(request[0]))
+        request = receive(client_socket).decode('utf-8')
+        splitted_request  = request.split(" ")
+        
         if (request[0] ==  "GET") & (request[1] == "/objects"):
             print("sono in get_object_list")
             body = get_object_list(cluster, pool)
@@ -181,9 +234,44 @@ if __name__ == '__main__':
             else:
                 body = body.decode('utf-8')
                 
-            status_line = ""
+            status_line = "HTTP/1.1 200 OK\r\n"
 
             send(client_socket, message, binary_obj)
+        
+        elif (splitted_request[0] ==  "POST") & ("/objects/" in splitted_request[1]):
+            file_to_upload = splitted_request[1].split('/')[2]
+
+            print("file_to_upload: {}".format(file_to_upload))
+            body = request.split("\n\n")[1]
+
+            response = add_object(file_to_upload, body, cluster, pool)
+
+            status_line = ""
+
+            message = create_HTTP_response(status_line, response)
+            send(client_socket, message)
+
+        elif (splitted_request[0] ==  "DELETE") & ("/objects/" in splitted_request[1]):
+            file_to_delete = splitted_request[1].split('/')[2]
+
+            print("file_to_delete: {}".format(file_to_delete))
+
+            response = delete_object(file_to_delete, cluster, pool)
+
+            status_line = ""
+
+            message = create_HTTP_response(status_line, response)
+            send(client_socket, message)
+
+        elif (splitted_request[0] ==  "GET") & ("/status" in splitted_request[1]):
+
+            response = get_cluster_state(cluster, pool)
+
+            status_line = ""
+
+            message = create_HTTP_response(status_line, response)
+            send(client_socket, message)
+
         
         else:
             print("comando errato")
