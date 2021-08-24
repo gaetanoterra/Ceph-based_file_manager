@@ -7,7 +7,10 @@ def menu():
     print("**********************MENU*******************\n"
           "Operazioni disponibili:\n"
           "get_object_list\n"
+          "add_object\n"
           "get_object\n"
+          "delete_object\n"
+          "get_status\n"
           "exit\n"
           "**********************************************\n")
 
@@ -21,14 +24,21 @@ def receive(s):
     header = header.split("\n\n")[0] # selezione l'header
     l = header.split("Content-Length:")     # seleziono tutti i campi dell'header per prendere l'ultimo che corrisponde a Content-Length
     dim = l[1]
-    l = int(dim.split("\r\n")[0])             # qui prendo la dimensione del body
-    missing_len = l - (1024 - len(header))  # io potrei aver ricevuto parte del body di dimensione (1024 - dimensione dell'hader), vedo quanto è lungo il body in totale, e vedo quanto ho ricevuto attualmente e mi aspetto la differenze
-    if missing_len > 0:
-        missing_data_received = s.recv(missing_len)
-        body = ((data_received + missing_data_received).decode('utf-8')).split("\n\n")[1]
-    else:
-        body = data_received.decode('utf-8').split("\n\n")[1]
-    
+     l = int(dim.split("\r\n")[0])             # qui prendo la dimensione del body
+#    missing_len = l - (1024 - len(header[0].encode('utf-8')))  # io potrei aver ricevuto parte del body di dimensio$
+    missing_len = l
+    body = header[1].encode('utf-8')
+    print("missing_len: {}".format(missing_len))
+
+    while missing_len > 0:
+        d = 1024
+        if missing_len < d:
+            d = missing_len
+        missing_data_received = s.recv(d)
+        body = body + missing_data_received
+
+        missing_len = missing_len -  d
+
     print("header: {}".format(header))
     print("l: {}".format(l))
     print("missing_len: {}".format(missing_len))
@@ -105,17 +115,62 @@ if __name__ == '__main__':
             
             send(s, messaggio_finale)
             
-            r = receive(s, binary_obj)
+            r = receive(s)
             if r.decode('utf-8') == "oggetto richiesto non trovato!":
                 print(r)
             else:
-                r = r.encode('utf-8')
                 file = open(file_name, "wb")
                 file.write(r)
                 file.close()
 
             s.close()
+        
+        elif request == 'add_object':
+            file_name = input('which file do you want to upload? ')
+            file = open(file_name, 'rb')
+            body = file.read().decode('utf-8')
 
+            request_line = "POST /objects/{} HTTP/1.1\r\n".format(file_name)
+
+            message = create_HTTP_request(request_line, body)
+
+            s = server_connection(server_id, server_port)
+
+            send(s, message)
+
+            r = receive(s)
+            print(r)
+            s.close()
+            file.close()
+
+        elif request == 'delete_object':
+            file_name = input('which file do you want to delete? ')
+
+            request_line = "DELETE /objects/{} HTTP/1.1\r\n".format(file_name)
+            message = create_HTTP_request(request_line, "")
+
+            s = server_connection(server_id, server_port)
+
+            send(s, message)
+
+            r = receive(s)
+            print(r)
+            s.close()
+
+        elif request == 'get_status':
+            request_line = "GET /status HTTP/1.1\r\n"
+            message = create_HTTP_request(request_line, "")
+
+            s = server_connection(server_id, server_port)
+
+            send(s, message)
+
+            r = receive(s)
+            print("Clusters Status: {}\n".format(r))
+            s.close()
+
+
+        
         elif request == 'exit':
             loop = False
             #r = requests.get("{}/objects/exit".format(server_id))
