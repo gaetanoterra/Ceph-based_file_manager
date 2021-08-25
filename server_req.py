@@ -53,7 +53,7 @@ def get_object(file_name, cluster, pool):
     except Exception as e:
         print("error: {}".format(e))
         print("failed to get object " + file_name)
-        return False
+        return "file not found"
     finally:
         ioctx.close()
         
