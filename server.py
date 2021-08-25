@@ -159,6 +159,11 @@ def receive(s):
     body = header[1].encode('utf-8')
     print("missing_len: {}".format(missing_len))
 
+    #potrebbe andare bene anche:                #aggiuntooggi
+    #if missing_len > 0:
+        #missing_data_received = s.recv(missing_len)
+        #body = body + missing_data_received
+    
     while missing_len > 0:
         d = 1024
         if missing_len < d:
@@ -178,8 +183,17 @@ def receive(s):
     return message
 
 def send(s, m):
-    s.send(m.encode('utf-8')) #invio la risposta al server
-
+    dim = sys.getsizeof(m)              #aggiuntooggi
+    i = 0
+    while i < dim:
+        if (dim - i) > 1024:
+            splitted_message = m[i:i + 1023]
+            i = i + 1023
+            s.send(splitted_message.encode('utf-8')) #invio la risposta al server
+        else:
+            splitted_message = m[i:dim]
+            s.send(splitted_message.encode('utf-8')) #invio la risposta al server
+    
 def create_HTTP_request(request_line, body):
     request_line = request_line
     header = header = "Content-Type: application/x-www-form-urlencoded\r\nContent-Length: {}\r\n".format(sys.getsizeof(body))
@@ -231,12 +245,13 @@ if __name__ == '__main__':
             body = get_object(cluster, pool, file_to_download)
             if message is False:
                 body = "oggetto richiesto non trovato!"
+                status_line = "HTTP/1.1 404 Not Found\r\n"
             else:
                 body = body.decode('utf-8')
-                
-            status_line = "HTTP/1.1 200 OK\r\n"
+                status_line = "HTTP/1.1 200 OK\r\n"
 
-            send(client_socket, message, binary_obj)
+            message = create_HTTP_response(status_line, body)       #aggiuntooggi
+            send(client_socket, message)
         
         elif (splitted_request[0] ==  "POST") & ("/objects/" in splitted_request[1]):
             file_to_upload = splitted_request[1].split('/')[2]
