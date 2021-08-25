@@ -30,8 +30,9 @@ if __name__ == '__main__':
             file_name = input('which fil do you want to download? ')
 
             response = requests.get("{}/object/{}".format(server_id, file_name))
-            if response.text == "oggetto richiesto non trovato!":
-                print(response.text)
+            
+            if response.text == "file not found":
+                print("file {} not found\n".format(file_name))
             else:
                 file = open(file_name, "wb")
                 file.write(response.content)
