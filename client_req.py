@@ -1,8 +1,11 @@
 import requests
+import load_balancer as lb
 
 def menu():
     #funzione che mostra il menu
-    print("**********************MENU*******************\n"
+     print("\n\n*************************************************\n"
+          "********************    MENU    *****************\n"
+          "*************************************************\n\n"
           "Operazioni disponibili:\n"
           "get_object_list\n"
           "add_object\n"
@@ -10,17 +13,17 @@ def menu():
           "delete_object\n"
           "get_status\n"
           "exit\n"
-          "**********************************************\n")
+          "**************************************************\n\n")
+
 
 if __name__ == '__main__':
-    server_id = "http://252.3.233.130:8080" # ip del container con cui comunicare
     loop = True
 
     while loop:
 
         menu()
         request = input('what do you want to do? ')
-
+        server_id = "http://{}:8080".format(lb.select_server())
         if request == 'get_object_list':
 
             response = requests.get("{}/list".format(server_id))
