@@ -47,6 +47,7 @@ def get_object(file_name):  # noqa: E501
     return handle_request(get_object, file_name)
 
 def get_object(file_name, cluster, pool):
+    file_content = ""
     try:
         ioctx = cluster.open_ioctx(pool)
         file_content = ioctx.read(file_name, int(10e8))
@@ -70,9 +71,21 @@ def add_object():  # noqa: E501
 def add_object(file, body, cluster, pool):
     try:
         ioctx = cluster.open_ioctx(pool)
-        ioctx.write_full(file, body)
-        print("{} was successfully added.".format(file))
-        response = "file successfully added\n"
+        objects = list(ioctx.list_objects())
+        found = False
+        for obj in objects:
+            if file_name == obj.key:
+                found = True
+
+        if found == True:
+            print("file exists\n")
+            response = "file {} already exists, rename it or send another file\n".format(file_name)
+            found = False
+        else:
+            print("file added\n")
+            ioctx.write_full(file_name, body)
+            response = "file successfully added\n"
+
     except Exception as e:
         print(e)
         print("Unable to add the object to: " + pool)
