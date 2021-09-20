@@ -2,7 +2,7 @@
 
 Steps to run the application:
 
-1) enter into virtual macines with ssh root@172.16.3.233, ssh root@172.16.3.234, ssh root@172.16.3.235.
+1) enter into virtual machines with ssh root@172.16.3.233, ssh root@172.16.3.234, ssh root@172.16.3.235.
 
 2) enter into machine's container
 
