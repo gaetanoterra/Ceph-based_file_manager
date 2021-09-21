@@ -2,11 +2,11 @@ import requests
 import load_balancer as lb
 
 def menu():
-    #funzione che mostra il menu
+    #function that shows the menu
      print("\n\n*************************************************\n"
           "********************    MENU    *****************\n"
           "*************************************************\n\n"
-          "Operazioni disponibili:\n"
+          "Available operations:\n"
           "get_object_list\n"
           "add_object\n"
           "get_object\n"
