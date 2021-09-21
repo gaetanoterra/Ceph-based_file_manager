@@ -4,7 +4,7 @@ Steps to run the application:
 
 1) enter into virtual machines with ssh root@172.16.3.233, ssh root@172.16.3.234, ssh root@172.16.3.235.
 
-2) enter into machine's container and run server's instances
+2) enter into machine's container and run server's instances:
 
 a) on machine 172.16.3.233 -> lxc exec juju-cd6e1f-1-lxd-0 /bin/bash -> python3 server.py
 
