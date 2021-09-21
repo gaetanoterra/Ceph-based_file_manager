@@ -68,7 +68,7 @@ def add_object():  # noqa: E501
 
     return handle_request(add_object, file_name, file_body)
 
-def add_object(file, body, cluster, pool):
+def add_object(file_name, body, cluster, pool):
     try:
         ioctx = cluster.open_ioctx(pool)
         objects = list(ioctx.list_objects())
